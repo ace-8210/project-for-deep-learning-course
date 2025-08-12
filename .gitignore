@@ -1,0 +1,14 @@
+# Ignore Python bytecode cache directories
+__pycache__/
+
+# Ignore specific Python files
+test.py
+evaluate.py
+
+# Ignore un-completed requirements file
+requirements.txt
+
+# Ignore .venv
+
+.venv/
+
