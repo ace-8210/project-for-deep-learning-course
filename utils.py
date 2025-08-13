@@ -245,10 +245,9 @@ def training_loop(model, processor, dataloader, classnames, select_distributions
   training_data["canny"] = 0
   training_data["spectral"] = 0
 
-  for batch, (features, labels) in tqdm(enumerate(dataloader), total=len(dataloader)):
+  for batch, (images, labels) in tqdm(enumerate(dataloader), total=len(dataloader)):
     # calculate CLIP's output
-    features = features.squeeze()
-    image_inputs = processor(images=features, return_tensors="pt"); image_inputs = image_inputs.to(device)
+    image_inputs = processor(images=images, return_tensors="pt"); image_inputs = image_inputs.to(device)
     text_inputs = processor(text=text, padding=True, return_tensors="pt"); text_inputs = inputs.to(device)
 
     img_repr = model.get_image_features(**image_inputs)
@@ -282,7 +281,7 @@ def training_loop(model, processor, dataloader, classnames, select_distributions
     ref = torch.argmax(output, dim=-1)
 
     # register results
-    refs.append(labels[0].item())
+    refs.append(labels[0])
     hyps.append(indices[:5].cpu().tolist())
 
     if iters != None and batch == iters:
@@ -290,38 +289,53 @@ def training_loop(model, processor, dataloader, classnames, select_distributions
 
   return hyps, refs, training_data
 
-def eval_loop(model, processor, dataloader, classnames):
-  device = "cuda" if torch.cuda.is_available() else "cpu"
+def eval_loop(model, processor, dataloader, classnames, iterations=None):
+  """
+  Evaluates clean (not augmented) images, do not use it with augmented dataloader.
+  Args:
+    - model: CLIP model
+    - processor: CLIP processor
+    - dataloader: dataloader
+    - classnames: classes for zero-shot classification
+    - iterations (optional): specify how many samples are seen for evaluation
+  """
+
+  dataloader_size = len(dataloader)
+
+  if iterations is not None:
+    assert iterations < dataloader_size, "iterations specified overshoot the length of the dataset"
+
+  device = model.device 
   model.eval()
 
   with torch.no_grad():
 
     text = [f"a photo of a {c}" for c in classnames]
-    hyps, refs = [], []
+    refs, hyps = [], []
 
-    for batch, (features, labels) in tqdm(enumerate(dataloader), total=len(dataloader)):
-      features = features.squeeze()
+    for batch, (images, labels) in tqdm(enumerate(dataloader), total=len(dataloader)):
 
-      # quick fix to feed PIL images into the CLIP's processor
-      images = []
-      for j in range(features.shape[0]):
-        images.append(to_pil_image(features[j]))
+      if iterations is not None and batch == iterations:
+        if len(refs) != 0:
+          return refs, hyps
+        else:
+          return None, None
 
       inputs = processor(text = text, images = images, return_tensors="pt", padding=True)
       inputs = inputs.to(device)
 
-      output = model(**inputs).logits_per_image
-
+      output = model(**inputs).logits_per_image  
       distributions = torch.softmax(output, dim=-1)
-
       indices = torch.argsort(distributions, dim=-1, descending=True).squeeze()
 
-      label = labels[0].item()
-      predictions = indices[:5].cpu().tolist()
-      
       # register results
-      refs.append(labels[0].item())
-      hyps.append(indices[:5].cpu().tolist())
+      for l in labels:
+        refs.append(l)
+
+      for i in range(indices.shape[0]):
+        hyps.append(indices[i, :5].cpu().tolist())
+
+      break
 
   return hyps, refs
 

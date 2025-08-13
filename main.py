@@ -24,33 +24,5 @@ print("***********************************")
 print("******** STARTING TRAINING ********")
 print("***********************************")
 
-acc_og = 0 
-acc_top5_og = 0
-
-import time
-start = time.time()
-
-mean = 4.8375
-std = 0.0137
-
-tot_time = time.time() - start
-hyps, refs, data =  training_loop(model, processor, dataloader, classnames, threshold, mean, 1e-3)
-
-print(f"execution took {tot_time} seconds")
-
-print("***********************************")
-print("*********** STATISTICS ************")
-print("***********************************")
-
-acc = accuracy(refs, hyps) 
-acc_top5 = top_5_accuracy(refs, hyps)
-
-print(f"accuracy: {acc}")
-print(f"top 5 accuracy: {acc_top5}")
-
-# plotting training data
-x = [k for k in data.keys()]
-y = [v for v in data.values()]
-plt.bar(x, y)
-
-plt.savefig("training-data.png")
+mean, std = get_avg_std_entropy(model, processor, dataloader, classnames, iterations = 10)
+print(mean, std)

@@ -169,19 +169,17 @@ augmentations = [
     transforms.Compose([to_tensor, SpectralResidualAugmentation(32), to_pil_image]),
 ]
 
-def collate_images(batch):
-  images, labels = [], []
-  for b in batch:
-    images.append(b[0][0])
-    labels.append(b[1][0])
-  return images, labels
+def collate_fn(batch):
+  batch = batch[0]
+  images, labels = batch
+  return images, labels 
 
 dataset = datasets.ImageFolder(root=dataset_path, transform=transform)
 dataloader = DataLoader(
     CustomDataset(dataset, augmentations),
     shuffle=True,
     batch_size=1,
-    collate_fn=collate_images
+    collate_fn=collate_fn
 )
 
 t = transforms.Compose([resize, to_tensor])
