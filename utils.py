@@ -1,8 +1,46 @@
 import torch
 from tqdm import tqdm
 from torchvision.transforms.functional import to_pil_image
+from transformers import CLIPProcessor, CLIPModel
+import yaml
 
 device = "cuda" if torch.cuda.is_available else "cpu"
+
+def read_config_file(file):
+  """
+  Reads yaml config file and checks arguments
+  Args:
+    - file: name of config file
+  """
+  print("#######################")
+  print("# reading config file #")
+  print("#######################")
+  with open(file, "r") as f:
+    data = yaml.safe_load(f)
+
+  assert float(data['lr']) > 0, "learning rate must be a positive number differen than zero"
+  assert data['strategy'] in ['topk', 'threshold'], "strategy must be either one of 'topk' or 'threshold'"
+  assert data['action'] in ['train', 'eval', 'get_statistics'], "action must be either one of 'train', 'eval' or 'get_statistics'"
+  assert data['dataloader'] in ['plain', 'augmented'], "dataloader must be either 'plain' or 'augmented'"
+  assert data['iterations'] > 0, "iterations must be greater than zero"
+
+  # if you are training, check values related to strategy
+  if data['action'] == "train":
+    if data['strategy'] == "topk":
+      if data['value'] <= 0 or data['value'] > 36:
+        raise Exception("value for strategy topk must be between 1 (original image) and 36 (every augmented image)")
+  
+    if data['dataloader'] == "plain":
+      print("warning: training on original dataset")
+    
+  return data
+
+params = read_config_file("./config.yaml")
+
+def load_model_and_processor():
+  model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+  processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+  return model, processor
 
 def top_5_accuracy(refs, hyps):
   """

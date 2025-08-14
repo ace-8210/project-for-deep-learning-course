@@ -1,12 +1,18 @@
 import torch
 import os
-from torch.utils.data import Dataset, DataLoader 
+from torch.utils.data import DataLoader 
 from torchvision import datasets, transforms
 from torchvision.transforms.functional import to_pil_image
+from utils import params
 
 # read dataset
-dataset_path = "/home/alfredo/datasets/imagenet-a"
-readme_path = "/home/alfredo/datasets/imagenet-a/README.txt"
+dataset_dir = params['dataset_dir']
+dataset_path = f"{dataset_dir}/imagenet-a"
+readme_path = f"{dataset_dir}/imagenet-a/README.txt"
+
+# assert dataset path exists
+assert os.path.exists(dataset_path), "dataset not found (specify dataset directory in config file, code will look for directory imagenet-a)"
+assert os.path.isfile(readme_path), "readme not found, it is necessary to get classnames"
 
 classnames = []
 with open(readme_path, "r") as f:
@@ -174,6 +180,9 @@ def collate_fn(batch):
   images, labels = batch
   return images, labels 
 
+print("########################")
+print("# creating dataloaders #")
+print("########################")
 dataset = datasets.ImageFolder(root=dataset_path, transform=transform)
 dataloader = DataLoader(
     CustomDataset(dataset, augmentations),
@@ -182,6 +191,6 @@ dataloader = DataLoader(
     collate_fn=collate_fn
 )
 
-t = transforms.Compose([resize, to_tensor])
-original_dataset_tensors = datasets.ImageFolder(root=dataset_path, transform=t)
-dataloader_plain = DataLoader(original_dataset_tensors, shuffle=True, batch_size=8)
+t = transforms.Compose([resize])
+original_dataset = datasets.ImageFolder(root=dataset_path, transform=t)
+dataloader_plain = DataLoader(original_dataset, shuffle=True, batch_size=8)

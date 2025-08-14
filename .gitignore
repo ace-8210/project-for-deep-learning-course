@@ -5,9 +5,6 @@ __pycache__/
 test.py
 evaluate.py
 
-# Ignore un-completed requirements file
-requirements.txt
-
 # Ignore .venv
 
 .venv/

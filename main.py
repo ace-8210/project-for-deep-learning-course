@@ -1,6 +1,4 @@
 import torch
-from transformers import CLIPProcessor, CLIPModel
-import matplotlib.pyplot as plt
 
 from utils import *
 from dataset import *
@@ -8,21 +6,74 @@ from augmentations import *
 
 from torchvision.transforms.functional import to_pil_image
 
-import matplotlib
-matplotlib.use('TkAgg') 
+lr = params['lr'] # learning rate
+strategy = params['strategy'] # strategy to select distributions
+value = params['value'] # value for strategy
+action = params['action'] # action to perform
+dl_type = params['dataloader'] # which dataloader to load
+iterations = int(params['iterations']) # number of iterations to perform
 
-print("***********************************")
-print("******* INSTANTIATING MODEL *******")
-print("***********************************")
+dl = dataloader if dl_type == "augmented" else dataloader_plain
+value = int(value) if strategy == "topk" else float(value)
 
-model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+print(iterations)
+
+print("#################")
+print("# loading model #")
+print("#################")
+
+model, processor = load_model_and_processor()
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model = model.to(device)
-processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
 
-print("***********************************")
-print("******** STARTING TRAINING ********")
-print("***********************************")
+print('#####################')
+print('# performing action #')
+print('#####################')
 
-mean, std = get_avg_std_entropy(model, processor, dataloader, classnames, iterations = 10)
-print(mean, std)
+try:
+  if action == "train":
+    print("training the model")
+    hyps, refs, data = training_loop(
+      model=model, 
+      processor=processor, 
+      dataloader=dl, 
+      classnames=classnames, 
+      select_distributions=topk if strategy == "topk" else threshold, 
+      criterion=value,
+      lr=float(lr),
+      iters=iterations)
+
+  elif action == "eval":
+    print("evaluating the model")
+    hyps, refs = eval_loop(
+      model=model,
+      processor=processor,
+      dataloader=dl,
+      classnames=classnames,
+      iterations=iterations
+    )
+
+  elif action == "get_stats":
+    print("getting stats")
+    mean, std = None, None
+    mean, std = get_avg_std_entropy(
+      model=model,
+      processor=processor,
+      dataloader=dl,
+      classnames=classnames,
+      iterations=iterations
+    )
+except KeyboardInterrupt:
+  print("quitting training early")
+
+
+if action == "train" or action == "eval":
+  if len(refs) != 0:
+    acc = accuracy(refs, hyps)
+    acc_top5 = top_5_accuracy(refs, hyps)
+
+    print(f"accuracy: {acc}, accuracy_top5 = {acc_top5}")
+
+else:
+  if mean is not None:
+    print(f"mean = {mean}, std = {std}")

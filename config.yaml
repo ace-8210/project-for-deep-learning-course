@@ -1,0 +1,7 @@
+lr: 1e-4
+strategy: "topk"
+value: 10
+dataloader: "augmented"
+action: "train"
+iterations: 5
+dataset_dir: "/home/alfredo/datasets"
