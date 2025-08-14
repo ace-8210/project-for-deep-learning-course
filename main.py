@@ -16,8 +16,6 @@ iterations = int(params['iterations']) # number of iterations to perform
 dl = dataloader if dl_type == "augmented" else dataloader_plain
 value = int(value) if strategy == "topk" else float(value)
 
-print(iterations)
-
 print("#################")
 print("# loading model #")
 print("#################")

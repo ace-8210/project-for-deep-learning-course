@@ -10,6 +10,7 @@ requirements:
 # description
 The code is adapted from the paper: https://arxiv.org/abs/2209.07511.
 ![img not available](images/TPT.png)
+
 It was implemented as a project for a deep learning course.
 My addition to the ideas expressed in the paper are:
 - a smarter way of selecting the threshold for distributions, by using the mean and standard deviation of distributions' entropies to guide the choice
